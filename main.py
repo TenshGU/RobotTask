@@ -1,8 +1,10 @@
 #!/bin/bash
 import sys
+from Object import *
+from Util import *
 
 Workbenches = []  # List for Workbench in this map
-
+Robots = [] # List for Robot in this map
 
 # read each frame's main information in here
 def read_util_ok():

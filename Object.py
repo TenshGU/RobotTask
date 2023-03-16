@@ -32,10 +32,11 @@ class Workbench:
 
 
 class Robot:
-    def __init__(self, radius: float, carry_type: int,
+    def __init__(self, ID: float, radius: float, carry_type: int,
                  time_coefficient: float, collide_coefficient: float,
                  angle_speed: float, line_speed: float, aspect: float,
                  X: float, Y: float):
+        self.ID = ID
         self.radius = radius
         self.carry_type = carry_type
         self.time_coefficient = time_coefficient
