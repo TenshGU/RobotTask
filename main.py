@@ -1,10 +1,10 @@
 #!/bin/bash
 import sys
-from Object import *
-from Util import *
+import Util
 
+Robots = []  # List for Robot in this map
 Workbenches = []  # List for Workbench in this map
-Robots = [] # List for Robot in this map
+
 
 # read each frame's main information in here
 def read_util_ok():
@@ -20,8 +20,8 @@ def finish():
 
 if __name__ == '__main__':
     # read map
-    read_util_ok()
-    finish()
+    Util.read_map(Robots, Workbenches)
+    Util.finish()
     while True:
         line = sys.stdin.readline()
         if not line:
@@ -29,7 +29,7 @@ if __name__ == '__main__':
         parts = line.split(' ')
         frame_id = int(parts[0])
         score = int(parts[1])
-        read_util_ok()
+        Util.read_frame()
 
         # No.frame_id's control
         sys.stdout.write('%d\n' % frame_id)
