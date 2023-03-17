@@ -12,7 +12,7 @@ class Workbench:
 
     def flush_status(self, remain: int, materials: int, product: int):
         self.remain = remain
-        self.materials = materials
+        self.materials = bin(materials)
         self.product = product
 
     # # if this Workbench need this item of type_ and this type_ not exist in here, return True
@@ -47,18 +47,21 @@ class Robot:
         self.time_coefficient = 0.0
         self.collide_coefficient = 0.0
         self.angle_speed = 0.0
-        self.line_speed = 0.0
+        self.line_speed_x = 0.0
+        self.line_speed_y = 0.0
         self.aspect = 0.0
         self.X = X
         self.Y = Y
 
     def flush_status(self, workbench: int, carry_type: int, time_coefficient: float, collide_coefficient: float,
-              angle_speed: float, line_speed: float, aspect: float, X: float, Y: float):
+                     angle_speed: float, line_speed_x: float, line_speed_y: float, aspect: float, X: float, Y: float):
+        self.workbench = workbench
         self.carry_type = carry_type
         self.time_coefficient = time_coefficient
         self.collide_coefficient = collide_coefficient
         self.angle_speed = angle_speed
-        self.line_speed = line_speed
+        self.line_speed_x = line_speed_x
+        self.line_speed_y = line_speed_y
         self.aspect = aspect
         self.X = X
         self.Y = Y

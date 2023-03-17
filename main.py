@@ -29,7 +29,9 @@ if __name__ == '__main__':
         parts = line.split(' ')
         frame_id = int(parts[0])
         score = int(parts[1])
-        Util.read_frame()
+        Util.read_frame(Robots, Workbenches)
+
+        # main algorithm
 
         # No.frame_id's control
         sys.stdout.write('%d\n' % frame_id)
@@ -37,4 +39,4 @@ if __name__ == '__main__':
         for robot_id in range(4):
             sys.stdout.write('forward %d %d\n' % (robot_id, line_speed))
             sys.stdout.write('rotate %d %f\n' % (robot_id, angle_speed))
-        finish()
+        Util.finish()

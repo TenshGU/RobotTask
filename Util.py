@@ -29,17 +29,20 @@ def read_map(Robots: [], Workbenches: []):
 
 
 def read_frame(Robots: [], Workbenches: []):
-    w_nums, w_len = int(input()), len(Workbenches)
+    w_nums = int(input())
     index = 0
     readline = input()
     while readline != "OK":
+        parts = readline.split(' ')
         if w_nums > 0:
-            parts = readline.split(' ')
-            Workbenches[w_nums].flush_status(parts[3], parts[4], parts[5])
-            index = index + 1 if index < w_len else 0
+            Workbenches[index].flush_status(int(parts[3]), int(parts[4]), int(parts[5]))
+            index = (index + 1) if w_nums - 1 > 0 else 0
             w_nums -= 1
         else:
-            Robots[index].flush_status()
+            Robots[index].flush_status(int(parts[0]), int(parts[1]), float(parts[2]),
+                                       float(parts[3]), float(parts[4]), float(parts[5]),
+                                       float(parts[6]), float(parts[7]), float(parts[8]),
+                                       float(parts[9]))
             index += 1
         readline = input()
 
