@@ -42,6 +42,7 @@ class Robot:
     def __init__(self, ID: float, radius: float, X: float, Y: float):
         self.ID = ID
         self.radius = radius
+        self.workbench = -1
         self.carry_type = 0
         self.time_coefficient = 0.0
         self.collide_coefficient = 0.0
@@ -51,19 +52,17 @@ class Robot:
         self.X = X
         self.Y = Y
 
-    def setup(self, carry_type: int, time_coefficient: float, collide_coefficient: float,
-              angle_speed: float, line_speed: float, aspect: float):
+    def flush_status(self, workbench: int, carry_type: int, time_coefficient: float, collide_coefficient: float,
+              angle_speed: float, line_speed: float, aspect: float, X: float, Y: float):
         self.carry_type = carry_type
         self.time_coefficient = time_coefficient
         self.collide_coefficient = collide_coefficient
         self.angle_speed = angle_speed
         self.line_speed = line_speed
         self.aspect = aspect
-
-    def flush_coordinate(self, X: float, Y: float):
         self.X = X
         self.Y = Y
 
-    def judge_collide(self, Workbenches: []) -> bool:
-        for workbench in Workbenches:
-            return False
+    # def judge_collide(self, Workbenches: []) -> bool:
+    #     for workbench in Workbenches:
+    #         return False
