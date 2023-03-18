@@ -1,9 +1,13 @@
 #!/bin/bash
 import sys
-import Util
+import InfoUtil
 
-Robots = []  # List for Robot in this map
-Workbenches = []  # List for Workbench in this map
+robots = []  # List for Robot in this map
+workbenches = []  # List for Workbench in this map
+sell_dict = {}  # key: type  value: coordinate {1:[[xx,yy], ...]} the coordinate of workbench that bobot can sell type
+waiting_benches = []  # when read frame, full it with which wbs product can be taken
+price = [[3000, 6000], [4400, 7600], [5800, 9200], [15400, 22500],
+         [17200, 25000], [19200, 27500], [76000, 105000]]  # price for each product
 
 
 # read each frame's main information in here
@@ -19,9 +23,9 @@ def finish():
 
 
 if __name__ == '__main__':
-    # read map
-    Util.read_map(Robots, Workbenches)
-    Util.finish()
+    # read map and initialization
+    InfoUtil.initialization(robots, workbenches, sell_dict)
+    InfoUtil.finish()
     while True:
         line = sys.stdin.readline()
         if not line:
@@ -29,7 +33,7 @@ if __name__ == '__main__':
         parts = line.split(' ')
         frame_id = int(parts[0])
         score = int(parts[1])
-        Util.read_frame(Robots, Workbenches)
+        InfoUtil.read_frame(robots, workbenches, waiting_benches)
 
         # main algorithm
 
@@ -39,4 +43,4 @@ if __name__ == '__main__':
         for robot_id in range(4):
             sys.stdout.write('forward %d %d\n' % (robot_id, line_speed))
             sys.stdout.write('rotate %d %f\n' % (robot_id, angle_speed))
-        Util.finish()
+        InfoUtil.finish()

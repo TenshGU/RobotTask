@@ -1,5 +1,8 @@
+import numpy as np
+
+
 class Workbench:
-    def __init__(self, ID: int, type_: int, needed: int, cycle: int, X: float, Y: float):
+    def __init__(self, ID: int, type_: int, needed: int, cycle: int, coordinate: np.ndarray, direct_next: []):
         self.ID = ID
         self.type_ = type_
         self.needed = needed
@@ -7,39 +10,31 @@ class Workbench:
         self.remain = -1
         self.materials = 0b00000000
         self.product = 0
-        self.X = X
-        self.Y = Y
+        self.coordinate = coordinate
+        self.direct_next = direct_next
+        self.direct_distance = {}  # distance for each direct workbench, key:ID, value:distance
+        self.future_value = 0  # the best future value
 
     def flush_status(self, remain: int, materials: int, product: int):
         self.remain = remain
         self.materials = bin(materials)
         self.product = product
 
-    # # if this Workbench need this item of type_ and this type_ not exist in here, return True
-    # def judge_suitable(self, type_):
-    #     return True if type_ in self.needed and type_ not in self.materials else False
-    #
-    # # if some Workbench does not need item, it will return False
-    # def place_items(self, type_, frame: int) -> bool:
-    #     if self.judge_suitable(type_):
-    #         self.materials.append(type_)
-    #         if len(self.materials) == len(self.needed):
-    #             self.begin = frame
-    #         return True
-    #     return False
-    #
-    # # whether the robot can take away the product, if robot took away, the self.begin will be reset
-    # def take_away(self, frame: int) -> int:
-    #     if self.begin >= 0 and frame - self.begin >= self.cycle:
-    #         self.begin = -1 if self.needed else frame
-    #         return True
-    #     return False
-    #
-    # def remain(self):
+    def setup_direct_distance(self, ID: int, distance: float):
+        self.direct_distance.setdefault(ID, distance)
+
+    def update_future_value(self, workbenches: []):
+        min_value = float('inf')
+        for key, value in self.direct_distance.items():
+            next_remain = workbenches[key].__dict__['remain']
+            if next_remain != -1:
+                current = value + next_remain
+                min_value = current if min_value > current else min_value
+        self.future_value = min_value
 
 
 class Robot:
-    def __init__(self, ID: float, radius: float, X: float, Y: float):
+    def __init__(self, ID: float, radius: float, coordinate: np.ndarray):
         self.ID = ID
         self.radius = radius
         self.workbench = -1
@@ -50,11 +45,11 @@ class Robot:
         self.line_speed_x = 0.0
         self.line_speed_y = 0.0
         self.aspect = 0.0
-        self.X = X
-        self.Y = Y
+        self.coordinate = coordinate
+        self.destination = np.array([-1, -1])
 
     def flush_status(self, workbench: int, carry_type: int, time_coefficient: float, collide_coefficient: float,
-                     angle_speed: float, line_speed_x: float, line_speed_y: float, aspect: float, X: float, Y: float):
+                     angle_speed: float, line_speed_x: float, line_speed_y: float, aspect: float, coordinate: np.ndarray):
         self.workbench = workbench
         self.carry_type = carry_type
         self.time_coefficient = time_coefficient
@@ -63,9 +58,7 @@ class Robot:
         self.line_speed_x = line_speed_x
         self.line_speed_y = line_speed_y
         self.aspect = aspect
-        self.X = X
-        self.Y = Y
+        self.coordinate = coordinate
 
-    # def judge_collide(self, Workbenches: []) -> bool:
-    #     for workbench in Workbenches:
-    #         return False
+    def set_destination(self, destination_: np.ndarray):
+        self.destination = destination_
