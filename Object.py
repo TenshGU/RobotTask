@@ -62,3 +62,45 @@ class Robot:
 
     def set_destination(self, destination_: np.ndarray):
         self.destination = destination_
+
+
+class KDTree:
+    def __init__(self, data):
+        self.k = data.shape[1]  # 数据维度
+        self.tree = self.build(data)
+
+    class Node:
+        def __init__(self, data, left, right):
+            self.data = data
+            self.left = left
+            self.right = right
+
+    def build(self, data, depth=0):
+        if len(data) == 0:
+            return None
+        axis = depth % self.k
+        sorted_idx = np.argsort(data[:, axis])
+        data_sorted = data[sorted_idx]
+        mid = len(data) // 2
+        return self.Node(data_sorted[mid],
+                         self.build(data_sorted[:mid], depth + 1),
+                         self.build(data_sorted[mid + 1:], depth + 1))
+
+    def query(self, x, k=1):
+        def search_knn(node, x, k, heap):
+            if node is None:
+                return
+            dist = np.linalg.norm(node.data - x)
+            if len(heap) < k:
+                heap.append((dist, node.data))
+            elif dist < heap[-1][0]:
+                heap[-1] = (dist, node.data)
+            axis = node.data.argmax()  # 取最大值对应的维度
+            if x[axis] < node.data[axis]:
+                search_knn(node.left, x, k, heap)
+            else:
+                search_knn(node.right, x, k, heap)
+
+        heap = []
+        search_knn(self.tree, x, k, heap)
+        return sorted(heap)

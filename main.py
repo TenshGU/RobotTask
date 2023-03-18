@@ -24,7 +24,7 @@ def finish():
 
 if __name__ == '__main__':
     # read map and initialization
-    InfoUtil.initialization(robots, workbenches, sell_dict)
+    tree = InfoUtil.initialization(robots, workbenches, sell_dict)
     InfoUtil.finish()
     while True:
         line = sys.stdin.readline()

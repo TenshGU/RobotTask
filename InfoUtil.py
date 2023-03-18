@@ -51,6 +51,14 @@ def initialization(robots: [], workbenches: [], sell_dict: {}):
                     workbench_j.setup_direct_distance(index_i, distance)
             index_i += 1
 
+        # construct the kd-tree
+        pointset = np.empty((0, 2))
+        for workbench in workbenches:
+            point = workbench.coordinate
+            pointset = np.vstack([pointset, point])
+        tree = KDTree(pointset)
+        return tree
+
 
 def read_frame(robots: [], workbenches: [], waiting_benches: []):
     w_nums = int(input())
