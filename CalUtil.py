@@ -34,9 +34,28 @@ def find_best_workbench(robots: [], workbenches: [], waiting_benches: [], tree: 
     """
     update_future_value(workbenches, waiting_benches)
 
+    len_r = len(robots)
     selected_w = set()
-    for robot in robots:
-        tree.query(robot, k=4, filter_func=filter_func)
+    selected = {}
+    while len(selected_w) == len_r:
+        for robot in robots:
+            k_nearest = tree.query(robot, k=len_r, filter_func=filter_func)
+            for k in k_nearest:
+                distance = k[0]
+                wb = k[1]
+                if wb not in selected_w:
+                    selected_w.add(wb)
+                    selected[wb] = [robot, distance]
+                    break
+                else:
+                    if selected[wb][1] < distance:
+                        continue
+                    else:
+                        selected[wb] = [robot, distance]
+
+    for key, value in selected.items():
+        robot = value[0]
+        robot.set_destination(key.coordinate)
 
 
 def post_operator() -> dict:

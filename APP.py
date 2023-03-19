@@ -162,7 +162,7 @@ print(float('inf') > 1000)
 # # 查询
 # query_point = np.array([0.5, 0.5])
 # k_nearest = tree.query(query_point, k=3)
-# print(k_nearest)
+# print(k_nearest[0][1])
 #
 # # 可视化
 # tree.visualize(0, 1, 0, 1)
