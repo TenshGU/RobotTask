@@ -1,4 +1,6 @@
+from math import floor
 import numpy as np
+import Constant as const
 
 
 class Workbench:
@@ -7,12 +9,16 @@ class Workbench:
         self.type_ = type_
         self.needed = needed
         self.cycle = cycle
+        self.product_type = -1 if type_ > 7 else type_
+        # will be flush by system
         self.remain = -1
         self.materials = 0b00000000
         self.product = 0
+        # fixed
         self.coordinate = coordinate
         self.direct_next = direct_next
         self.direct_distance = {}  # distance for each direct workbench, key:ID, value:distance
+        # should be updated, when robot find the best wb
         self.future_value = float('inf')  # the best future value
 
     def flush_status(self, remain: int, materials: int, product: int):
@@ -25,18 +31,21 @@ class Workbench:
 
     def update_future_value(self, workbenches: []):
         min_value = float('inf')
+        all_no_begin = True
         for key, value in self.direct_distance.items():
             next_remain = workbenches[key].__dict__['remain']
             if next_remain != -1:
+                all_no_begin = False
                 current = value + next_remain
                 min_value = current if min_value > current else min_value
-        self.future_value = min_value
+        self.future_value = 0 if all_no_begin else min_value
 
 
 class Robot:
     def __init__(self, ID: float, radius: float, coordinate: np.ndarray):
         self.ID = ID
         self.radius = radius
+
         self.workbench = -1
         self.carry_type = 0
         self.time_coefficient = 0.0
@@ -46,7 +55,12 @@ class Robot:
         self.line_speed_y = 0.0
         self.aspect = 0.0
         self.coordinate = coordinate
+
+        self.expect_type = 0
         self.destination = np.array([-1, -1])
+        self.task_distance = 0
+        self.product_value = 0
+        self.urgency = -1
 
     def flush_status(self, workbench: int, carry_type: int, time_coefficient: float, collide_coefficient: float,
                      angle_speed: float, line_speed_x: float, line_speed_y: float, aspect: float, coordinate: np.ndarray):
@@ -59,9 +73,13 @@ class Robot:
         self.line_speed_y = line_speed_y
         self.aspect = aspect
         self.coordinate = coordinate
-
-    def set_destination(self, destination_: np.ndarray):
-        self.destination = destination_
+        if carry_type != 0:
+            self.product_value = floor(const.PRICE[carry_type-1][1] * time_coefficient * collide_coefficient)
+        else:
+            # reset the attribute not belong to the system given
+            self.destination = np.array([-1, -1])
+            self.task_distance = 0
+            self.product_value = 0
 
 
 class KDTree:
@@ -93,7 +111,7 @@ class KDTree:
         def search_knn(node, obj_x, k, heap):
             if node is None:
                 return
-            if filter_func is not None and filter_func(obj_x, node.obj):  # 过滤不满足条件的数据点
+            if filter_func(obj_x, node.obj):  # 过滤不满足条件的数据点
                 return
             x = obj_x.coordinate
             dist = np.linalg.norm(node.data - x) + node.obj.future_value

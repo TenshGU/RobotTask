@@ -1,5 +1,15 @@
+import array
+import heapq
+import math
 import numpy as np
-from Object import KDTree
+import Constant as const
+from Object import KDTree, Robot
+
+
+def pre_operator(workbenches: []):
+    filtered = [wb for wb in workbenches if wb.remain >= 0]
+    k = len(filtered) if len(filtered) <= const.WAITING_NUM else const.WAITING_NUM
+    return heapq.nsmallest(k, filtered, key=lambda wb: wb.remain)
 
 
 def update_future_value(workbenches: [], waiting_benches: []):
@@ -34,12 +44,11 @@ def find_best_workbench(robots: [], workbenches: [], waiting_benches: [], tree: 
     """
     update_future_value(workbenches, waiting_benches)
 
-    len_r = len(robots)
     selected_w = set()
     selected = {}
-    while len(selected_w) == len_r:
+    while len(selected_w) != const.ROBOT_NUM:
         for robot in robots:
-            k_nearest = tree.query(robot, k=len_r, filter_func=filter_func)
+            k_nearest = tree.query(robot, k=const.ROBOT_NUM, filter_func=filter_func)
             for k in k_nearest:
                 distance = k[0]
                 wb = k[1]
@@ -52,15 +61,112 @@ def find_best_workbench(robots: [], workbenches: [], waiting_benches: [], tree: 
                         continue
                     else:
                         selected[wb] = [robot, distance]
-
     for key, value in selected.items():
         robot = value[0]
-        robot.set_destination(key.coordinate)
+        robot.destination = key.coordinate
+        robot.task_distance = np.linalg.norm(robot.coordinate - robot.destination)
+        robot.expect_type = key.product_type
 
 
-def post_operator() -> dict:
+def post_operator(robots: []) -> []:
     """the operator for the machine should do to move itself(i.e. rotate)"""
+    setup_urgency(robots)
+    forward_list = cal_robots_forward(robots)
+    res = []
+    for robot in robots:
+        opt_dict = {}
+        l_speed = math.sqrt(robot.line_speed_x ** 2 + robot.line_speed_y ** 2)
+        a_speed = robot.angle_speed
+        target_direction = cal_angle(robot)
+        target_distance = robot.task_distance
+
+        line_speed, angle_speed = calculate_next_velocity(l_speed, a_speed, target_direction, target_distance)
+
+        opt_dict['forward'] = line_speed
+        opt_dict['rotate'] = angle_speed
+        opt_dict['buy'] = cal_buy(robot)
+        opt_dict['sell'] = cal_sell(robot)
+        res.append(opt_dict)
+    return res
 
 
-def judge_collide() -> bool:
-    """judge whether the machines will be collided by themselves"""
+def setup_urgency(robots: []):
+    all_distance = 0
+    max_value = const.ALL_VALUE
+    for robot in robots:
+        if robot.product_value == 0:
+            all_distance += robot.task_distance
+    upper = all_distance + max_value
+    for robot in robots:
+        if robot.product_value == 0:
+            robot.urgency = const.LOWEST_PRIORITY  # this robot has not taken any material
+        robot.urgency = (upper - (robot.task_distance + robot.product_value)) / upper
+
+
+def judge_collide(robots: []) -> bool:
+    """
+    judge whether the machines will be collided by themselves
+    if robot will be collided, choose a lower proprity one to slow down/rotate
+    if their proprity equals, random to choose one to slow down/rotate
+    here only consider the robot slow down
+    """
+
+
+def cal_robots_forward(robots: []) -> []:
+    sorted_indexes = [i for i, _ in sorted(enumerate(robots), key=lambda i_r: i_r[1].urgency, reverse=True)]
+    max_index = sorted_indexes[0]
+    arr = array.array('f', const.INIT_SPEED)
+    arr[max_index] = const.ROBOT_MAX_SPEED
+    for index in sorted_indexes[1:]:
+        """1"""
+    return list(arr)
+
+
+def cal_angle(robot: Robot) -> float:
+    coord_r = robot.coordinate
+    coord_d = robot.destination
+    angle = math.atan2(coord_d[1] - coord_r[1], coord_d[0] - coord_r[0])
+    return angle
+
+
+def cal_buy(robot: Robot) -> int:
+    if robot.carry_type == 0 and robot.task_distance < const.INTERACTION_RADIUS:
+        return robot.expect_type
+    return -1
+
+
+def cal_sell(robot: Robot) -> int:
+    if robot.carry_type != 0 and robot.task_distance < const.INTERACTION_RADIUS:
+        return robot.carry_type
+    return -1
+
+
+def calculate_next_velocity(current_speed, current_heading, target_direction, target_distance):
+    # 计算角速度
+    heading_error = target_direction - current_heading
+    if heading_error > math.pi:
+        heading_error -= 2 * math.pi
+    elif heading_error < -math.pi:
+        heading_error += 2 * math.pi
+    max_torque = 50
+    angular_acceleration = heading_error * max_torque / 20  # 角加速度 = 角误差 * 最大力矩 / (密度 * 半径^2)
+    max_angular_speed = math.pi
+    if angular_acceleration > 0:
+        max_angular_speed = min(max_angular_speed, math.sqrt(2 * angular_acceleration * math.pi / 50))
+    else:
+        max_angular_speed = max(-max_angular_speed, -math.sqrt(2 * abs(angular_acceleration) * math.pi / 50))
+    angular_speed = max(min(max_angular_speed, math.pi), -math.pi)
+
+    # 计算线速度
+    max_force = 250
+    max_speed_forward = 6.0
+    max_speed_backward = -2.0
+    speed_error = min(max_speed_forward, max_speed_backward, target_distance) - current_speed
+    linear_acceleration = speed_error * max_force / 20  # 线加速度 = 速度误差 * 最大牵引力 / 密度
+    if linear_acceleration > 0:
+        max_linear_speed = min(max_speed_forward, math.sqrt(2 * linear_acceleration * 6))
+    else:
+        max_linear_speed = max(max_speed_backward, -math.sqrt(2 * abs(linear_acceleration) * 2))
+    linear_speed = max(min(max_linear_speed, 6), -2)
+
+    return angular_speed, linear_speed

@@ -1,6 +1,8 @@
-import random
+import time
 
 import numpy as np
+
+import Constant
 
 Dict = {}
 coordinate = Dict.get(1) if Dict.__contains__(1) else []
@@ -170,3 +172,63 @@ print(float('inf') > 1000)
 # # a = np.array([1, 2])
 # # b = np.array([2, 3])
 # # print(b)
+
+def change(s: []):
+    s.append(test(np.array([1, 2])))
+
+yes = []
+b = change(yes)
+print(yes)
+
+print(Constant.INIT_SPEED)
+
+import math
+
+
+def calculate_next_velocity(current_pos, current_speed, current_heading, target_pos):
+    # 计算目标方向和距离
+    target_direction = math.atan2(target_pos[1] - current_pos[1], target_pos[0] - current_pos[0])
+    target_distance = math.sqrt((target_pos[0] - current_pos[0]) ** 2 + (target_pos[1] - current_pos[1]) ** 2)
+
+    # 如果已经到达终点
+    if target_distance < 0.4:
+        return 0, 0
+
+    # 计算角速度
+    heading_error = target_direction - current_heading
+    if heading_error > math.pi:
+        heading_error -= 2 * math.pi
+    elif heading_error < -math.pi:
+        heading_error += 2 * math.pi
+    max_torque = 50
+    angular_acceleration = heading_error * max_torque / 20  # 角加速度 = 角误差 * 最大力矩 / (密度 * 半径^2)
+    max_angular_speed = math.pi
+    if angular_acceleration > 0:
+        max_angular_speed = min(max_angular_speed, math.sqrt(2 * angular_acceleration * math.pi / 50))
+    else:
+        max_angular_speed = max(-max_angular_speed, -math.sqrt(2 * abs(angular_acceleration) * math.pi / 50))
+    angular_speed = max(min(max_angular_speed, math.pi), -math.pi)
+
+    # 计算线速度
+    max_force = 250
+    max_speed_forward = 6
+    max_speed_backward = -2
+    speed_error = min(max_speed_forward, max_speed_backward, target_distance) - current_speed
+    linear_acceleration = speed_error * max_force / 20  # 线加速度 = 速度误差 * 最大牵引力 / 密度
+    if linear_acceleration > 0:
+        max_linear_speed = min(max_speed_forward, math.sqrt(2 * linear_acceleration * 6))
+    else:
+        max_linear_speed = max(max_speed_backward, -math.sqrt(2 * abs(linear_acceleration) * 2))
+    linear_speed = max(min(max_linear_speed, 6), -2)
+
+    return angular_speed, linear_speed
+
+s = time.perf_counter()
+calculate_next_velocity([3,3], 0, 0, [3,10])
+e = time.perf_counter()
+print(e - s)
+
+di = {"sss": -1}
+for key, value in di.items():
+    print(key == 'sss')
+    print(value)
