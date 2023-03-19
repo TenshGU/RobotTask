@@ -53,10 +53,11 @@ def initialization(robots: [], workbenches: [], sell_dict: {}):
 
         # construct the kd-tree
         pointset = np.empty((0, 2))
+        workbenches_np = np.array(workbenches)
         for workbench in workbenches:
             point = workbench.coordinate
             pointset = np.vstack([pointset, point])
-        tree = KDTree(pointset)
+        tree = KDTree(pointset, workbenches_np)
         return tree
 
 

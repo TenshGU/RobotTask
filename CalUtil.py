@@ -1,4 +1,5 @@
 import numpy as np
+from Object import KDTree
 
 
 def update_future_value(workbenches: [], waiting_benches: []):
@@ -6,7 +7,19 @@ def update_future_value(workbenches: [], waiting_benches: []):
         wb.update_future_value(workbenches)
 
 
-def find_best_workbench(robots: [], workbenches: [], waiting_benches: []):
+# define which workbench should be filtered
+def filter_func(robot, wb) -> bool:
+    carry_type = robot.carry_type
+    needed = wb.needed
+    have = wb.materials
+    # if robot carry the material that wb needed, and wb haven't
+    # if robot doesn't carry any material and wb doesn't need any material
+    # here is not consider that whether robot need to destroy material
+    return False if ((needed & (1 << carry_type)) > 0 and (have & (1 << carry_type)) == 0) or \
+                    (carry_type == 0 and needed == 0) else True
+
+
+def find_best_workbench(robots: [], workbenches: [], waiting_benches: [], tree: KDTree):
     """
     Dealing with Two-dimensional Nearest Point Pair Problems by Divide and Conquer Method. O(nlogn)
     choose the best workbench for robot to interaction
@@ -22,23 +35,8 @@ def find_best_workbench(robots: [], workbenches: [], waiting_benches: []):
     update_future_value(workbenches, waiting_benches)
 
     selected_w = set()
-    for workbench in workbenches:
-        coord_w = workbench.coordinate
-        f_v = workbench.future_value
-        needed = workbench.needed
-        have = workbench.materials
-        for robot in robots:
-            carry_type = robot.carry_type
-            # if robot carry the material that wb needed, and wb haven't
-            # if robot doesn't carry any material and wb doesn't need any material
-            # here is not consider that whether robot need to destroy material
-            if ((needed & (1 << carry_type)) > 0 and (have & (1 << carry_type)) == 0) or \
-                    (carry_type == 0 and needed == 0):
-                coord_r = robot.coordinate
-                value = np.linalg.norm(coord_r - coord_w) + f_v
-
-
-
+    for robot in robots:
+        tree.query(robot, k=4, filter_func=filter_func)
 
 
 def post_operator() -> dict:

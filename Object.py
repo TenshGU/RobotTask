@@ -13,7 +13,7 @@ class Workbench:
         self.coordinate = coordinate
         self.direct_next = direct_next
         self.direct_distance = {}  # distance for each direct workbench, key:ID, value:distance
-        self.future_value = 0  # the best future value
+        self.future_value = float('inf')  # the best future value
 
     def flush_status(self, remain: int, materials: int, product: int):
         self.remain = remain
@@ -65,36 +65,42 @@ class Robot:
 
 
 class KDTree:
-    def __init__(self, data):
+    def __init__(self, data, objects):
         self.k = data.shape[1]  # 数据维度
-        self.tree = self.build(data)
+        self.tree = self.build(data, objects)
 
     class Node:
-        def __init__(self, data, left, right):
+        def __init__(self, data, left, right, obj=None):
             self.data = data
             self.left = left
             self.right = right
+            self.obj = obj
 
-    def build(self, data, depth=0):
+    def build(self, data, objects, depth=0):
         if len(data) == 0:
             return None
         axis = depth % self.k
         sorted_idx = np.argsort(data[:, axis])
         data_sorted = data[sorted_idx]
+        objects_sorted = objects[sorted_idx]
         mid = len(data) // 2
         return self.Node(data_sorted[mid],
-                         self.build(data_sorted[:mid], depth + 1),
-                         self.build(data_sorted[mid + 1:], depth + 1))
+                         self.build(data_sorted[:mid], objects_sorted[:mid], depth + 1),
+                         self.build(data_sorted[mid + 1:], objects_sorted[mid + 1:], depth + 1),
+                         objects_sorted[mid])
 
-    def query(self, x, k=1):
-        def search_knn(node, x, k, heap):
+    def query(self, obj_x, k=1, filter_func=None):
+        def search_knn(node, obj_x, k, heap):
             if node is None:
                 return
-            dist = np.linalg.norm(node.data - x)
+            if filter_func is not None and filter_func(obj_x, node.obj):  # 过滤不满足条件的数据点
+                return
+            x = obj_x.coordinate
+            dist = np.linalg.norm(node.data - x) + node.obj.future_value
             if len(heap) < k:
-                heap.append((dist, node.data))
+                heap.append((dist, node.obj))
             elif dist < heap[-1][0]:
-                heap[-1] = (dist, node.data)
+                heap[-1] = (dist, node.obj)
             axis = node.data.argmax()  # 取最大值对应的维度
             if x[axis] < node.data[axis]:
                 search_knn(node.left, x, k, heap)
@@ -102,5 +108,5 @@ class KDTree:
                 search_knn(node.right, x, k, heap)
 
         heap = []
-        search_knn(self.tree, x, k, heap)
+        search_knn(self.tree, obj_x, k, heap)
         return sorted(heap)
