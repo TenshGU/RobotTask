@@ -1,6 +1,22 @@
 from math import floor
 import numpy as np
 import Constant as const
+import logging
+logger = logging.getLogger("simple_example")
+logger.setLevel(logging.DEBUG)
+# 建立一个filehandler来把日志记录在文件里，级别为debug以上
+fh = logging.FileHandler("spam.log")
+fh.setLevel(logging.DEBUG)
+# 建立一个streamhandler来把日志打在CMD窗口上，级别为error以上
+ch = logging.StreamHandler()
+ch.setLevel(logging.ERROR)
+# 设置日志格式
+formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+ch.setFormatter(formatter)
+fh.setFormatter(formatter)
+#将相应的handler添加在logger对象中
+logger.addHandler(ch)
+logger.addHandler(fh)
 
 
 class Workbench:
@@ -12,33 +28,28 @@ class Workbench:
         self.product_type = -1 if type_ > 7 else type_
         # will be flush by system
         self.remain = -1
-        self.materials = 0b00000000
+        self.materials = 0
         self.product = 0
         # fixed
         self.coordinate = coordinate
         self.direct_next = direct_next
-        self.direct_distance = {}  # distance for each direct workbench, key:ID, value:distance
+        self.direct_distance = {}  # distance for each direct workbench, key:ID in wbs, value:distance
         # should be updated, when robot find the best wb
         self.future_value = float('inf')  # the best future value
 
     def flush_status(self, remain: int, materials: int, product: int):
         self.remain = remain
-        self.materials = bin(materials)
+        self.materials = materials
         self.product = product
 
     def setup_direct_distance(self, ID: int, distance: float):
-        self.direct_distance.setdefault(ID, distance)
+        self.direct_distance[ID] = distance
 
-    def update_future_value(self, workbenches: []):
+    def update_future_value(self):
         min_value = float('inf')
-        all_no_begin = True
         for key, value in self.direct_distance.items():
-            next_remain = workbenches[key].__dict__['remain']
-            if next_remain != -1:
-                all_no_begin = False
-                current = value + next_remain
-                min_value = current if min_value > current else min_value
-        self.future_value = 0 if all_no_begin else min_value
+            min_value = value if min_value > value else min_value
+        self.future_value = min_value
 
 
 class Robot:
@@ -57,10 +68,12 @@ class Robot:
         self.coordinate = coordinate
 
         self.expect_type = 0
-        self.destination = np.array([-1, -1])
+        self.destination = np.array([-2, -2])
         self.task_distance = 0
         self.product_value = 0
         self.urgency = -1
+        self.last_interaction = np.array([-1, -1])
+        self.dest_wb = None
 
     def flush_status(self, workbench: int, carry_type: int, time_coefficient: float, collide_coefficient: float,
                      angle_speed: float, line_speed_x: float, line_speed_y: float, aspect: float, coordinate: np.ndarray):
@@ -80,51 +93,3 @@ class Robot:
             self.destination = np.array([-1, -1])
             self.task_distance = 0
             self.product_value = 0
-
-
-class KDTree:
-    def __init__(self, data, objects):
-        self.k = data.shape[1]  # 数据维度
-        self.tree = self.build(data, objects)
-
-    class Node:
-        def __init__(self, data, left, right, obj=None):
-            self.data = data
-            self.left = left
-            self.right = right
-            self.obj = obj
-
-    def build(self, data, objects, depth=0):
-        if len(data) == 0:
-            return None
-        axis = depth % self.k
-        sorted_idx = np.argsort(data[:, axis])
-        data_sorted = data[sorted_idx]
-        objects_sorted = objects[sorted_idx]
-        mid = len(data) // 2
-        return self.Node(data_sorted[mid],
-                         self.build(data_sorted[:mid], objects_sorted[:mid], depth + 1),
-                         self.build(data_sorted[mid + 1:], objects_sorted[mid + 1:], depth + 1),
-                         objects_sorted[mid])
-
-    def query(self, obj_x, k=1, filter_func=None):
-        def search_knn(node, obj_x, k, heap):
-            if node is None:
-                return
-            if filter_func(obj_x, node.obj):  # 过滤不满足条件的数据点
-                return
-            x = obj_x.coordinate
-            dist = np.linalg.norm(node.data - x) + node.obj.future_value
-            if len(heap) < k:
-                heap.append((dist, node.obj))
-            elif dist < heap[-1][0]:
-                heap[-1] = (dist, node.obj)
-            axis = node.data.argmax()  # 取最大值对应的维度
-            if x[axis] < node.data[axis]:
-                search_knn(node.left, x, k, heap)
-            else:
-                search_knn(node.right, x, k, heap)
-
-        heap = []
-        search_knn(self.tree, obj_x, k, heap)
-        return sorted(heap)

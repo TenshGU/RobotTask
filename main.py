@@ -5,15 +5,14 @@ import Constant as const
 
 robots = []  # List for Robot in this map
 workbenches = []  # List for Workbench in this map
-sell_dict = {}  # key: type  value: coordinate {1:[[xx,yy], ...]} the coordinate of workbench that bobot can sell type
+type_wbs = {}  # key: type  value: coordinate {1:[[xx,yy], ...]} the coordinate of workbench that bobot can sell type
 waiting_benches = []  # when read frame, full it with which wbs product can be taken
-kd_tree = []  # KD-Tree
+have_type = []
 
 
 if __name__ == '__main__':
     # read map and initialization
-    initialization(robots, workbenches, sell_dict, kd_tree)
-    tree = kd_tree[0]
+    initialization(robots, workbenches, type_wbs, have_type)
     finish()
     while True:
         line = sys.stdin.readline()
@@ -22,13 +21,13 @@ if __name__ == '__main__':
         parts = line.split(' ')
         frame_id = int(parts[0])
         score = int(parts[1])
-        read_frame(robots, workbenches, waiting_benches)
+        read_frame(robots, workbenches, waiting_benches, type_wbs, have_type)
 
         # wb have not any product can be taken away, choose the wb which has less remain
         if not waiting_benches:
             waiting_benches = pre_operator(workbenches)
         # main algorithm
-        find_best_workbench(robots, workbenches, waiting_benches, tree)
+        find_best_workbench(robots, waiting_benches)
         operation = post_operator(robots)
 
         # No.frame_id's control
