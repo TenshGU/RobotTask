@@ -231,12 +231,17 @@ def cal_angle(robot: Robot) -> float:
 def cal_buy(robot: Robot) -> int:
     # judge whether the robot has interacted with wb, or the robot will stay in here to take repeat action
     # based on the robot will never interact with the same wb in near two times
-    allow_interact = True if robot.dest_wb.product == 1 else False
-    if ((not (robot.last_interaction == robot.destination).all) or (robot.last_interaction == np.array([-1, -1])).all) \
-            and allow_interact:
+    not_last_interaction = False
+    allow_buy = False
+    # the wb should not be the last interact wb
+    if (not (robot.last_interaction == robot.destination).all) or (robot.last_interaction == np.array([-1, -1])).all:
+        not_last_interaction = True
+    # only when the robot in interaction radius and the product can be taken away
+    if robot.dest_wb.product == 1 and robot.carry_type == 0 and robot.task_distance < const.INTERACTION_RADIUS:
+        allow_buy = True
+    if not_last_interaction and allow_buy:
         robot.last_interaction = robot.destination
-        if robot.carry_type == 0 and robot.task_distance < const.INTERACTION_RADIUS:
-            return robot.expect_type
+        return robot.expect_type
     return -1
 
 
@@ -246,12 +251,16 @@ def cal_sell(robot: Robot) -> int:
     carry_type = robot.carry_type
     needed = robot.dest_wb.needed
     have = robot.dest_wb.materials
-    allow_interact = True if ((needed & (1 << carry_type)) > 0 and (have & (1 << carry_type)) == 0) else False
-    if ((not (robot.last_interaction == robot.destination).all) or (robot.last_interaction == np.array([-1, -1])).all) \
-            and allow_interact:
+    not_last_interaction = False
+    allow_sell = False
+    if (not (robot.last_interaction == robot.destination).all) or (robot.last_interaction == np.array([-1, -1])).all:
+        not_last_interaction = True
+    if ((needed & (1 << carry_type)) > 0 and (have & (1 << carry_type)) == 0) \
+            and robot.carry_type != 0 and robot.task_distance < const.INTERACTION_RADIUS:
+        allow_sell = True
+    if not_last_interaction and allow_sell:
         robot.last_interaction = robot.destination
-        if robot.carry_type != 0 and robot.task_distance < const.INTERACTION_RADIUS:
-            return robot.carry_type
+        return robot.carry_type
     return -1
 
 
