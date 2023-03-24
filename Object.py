@@ -20,9 +20,11 @@ logger.addHandler(fh)
 
 
 class Workbench:
-    def __init__(self, ID: int, type_: int, needed: int, cycle: int, coordinate: np.ndarray, direct_next: []):
+    def __init__(self, ID: int, type_: int, angle: float, profit: int, needed: int, cycle: int, coordinate: np.ndarray, direct_next: []):
         self.ID = ID
         self.type_ = type_
+        self.angle = angle
+        self.profit = profit
         self.needed = needed
         self.cycle = cycle
         self.product_type = -1 if type_ > 7 else type_
@@ -36,6 +38,7 @@ class Workbench:
         self.direct_distance = {}  # distance for each direct workbench, key:ID in wbs, value:distance
         # should be updated, when robot find the best wb
         self.future_value = float('inf')  # the best future value
+        self.future_next = None
 
     def flush_status(self, remain: int, materials: int, product: int):
         self.remain = remain
@@ -45,10 +48,12 @@ class Workbench:
     def setup_direct_distance(self, ID: int, distance: float):
         self.direct_distance[ID] = distance
 
-    def update_future_value(self):
+    def update_future_value(self, workbench: []):
         min_value = float('inf')
         for key, value in self.direct_distance.items():
-            min_value = value if min_value > value else min_value
+            if min_value > value:
+                min_value = value
+                self.future_next = workbench[key]
         self.future_value = min_value
 
 

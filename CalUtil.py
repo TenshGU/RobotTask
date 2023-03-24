@@ -3,8 +3,9 @@ import heapq
 import math
 import numpy as np
 import Constant as const
-from Object import Robot
+from Object import Robot, Workbench
 import logging
+
 logger = logging.getLogger("simple_example")
 logger.setLevel(logging.DEBUG)
 # 建立一个filehandler来把日志记录在文件里，级别为debug以上
@@ -22,7 +23,18 @@ logger.addHandler(ch)
 logger.addHandler(fh)
 
 
-def space_search(waiting_benches: [], obj_x, k=1, filter_func=None) -> []:
+def sort_rule(wb: Workbench, robot: Robot):
+    distance = np.linalg.norm(wb.coordinate - robot.coordinate)
+    type_ = wb.type_
+    needed = wb.future_next.needed
+    have = wb.future_next.materials
+    p = 0
+    if (needed & (1 << type_)) > 0 and (have & (1 << type_)) == 0:
+        p = wb.profit / (distance + wb.future_value)  # have meaning
+    return distance + wb.future_value - p
+
+
+def space_search(waiting_benches: [], remain_count: {}, robot_carry_type: [], obj_x, k=1, filter_func=None) -> []:
     # heap = []
     # never_selected = []
     # for wb in waiting_benches:
@@ -42,9 +54,8 @@ def space_search(waiting_benches: [], obj_x, k=1, filter_func=None) -> []:
     #         heap.append([never_selected[i][0], never_selected[i][1]])
     # logger.info(len(heap))
     # return sorted(heap, key=lambda res: res[0])
-    filtered = [wb for wb in waiting_benches if not filter_func(obj_x, wb)]
-    result_list = heapq.nsmallest(k, filtered,
-                                  key=lambda wb: (np.linalg.norm(wb.coordinate - obj_x.coordinate) + wb.future_value))
+    filtered = [wb for wb in waiting_benches if not filter_func(obj_x, wb, remain_count, robot_carry_type)]
+    result_list = heapq.nsmallest(k, filtered, key=lambda wb: sort_rule(wb, robot=obj_x))
     result_with_distance = [[np.linalg.norm(wb.coordinate - obj_x.coordinate) + wb.future_value, wb] for wb in
                             result_list]
     return result_with_distance
@@ -56,27 +67,34 @@ def pre_operator(workbenches: []):
     return heapq.nsmallest(k, filtered, key=lambda wb: wb.remain)
 
 
-def update_future_value(waiting_benches: []):
+def update_future_value(workbenches: [], waiting_benches: []):
     for wb in waiting_benches:
-        wb.update_future_value()
+        wb.update_future_value(workbenches)
 
 
 # filter which wb that robot can get there
-def filter_func(robot, wb) -> bool:
+def filter_func(robot, wb, remain_count: {}, robot_carry_type: []) -> bool:
     carry_type = robot.carry_type
+    type_ = wb.type_
     needed = wb.needed
     have = wb.materials
     product = wb.product
+    count = remain_count[type_] if remain_count.__contains__(type_) else 0
+    for rct in robot_carry_type:
+        if rct == type_:
+            count -= 1
     # if robot carry the material that wb needed, and wb haven't(can sell 4-9)
     # if robot doesn't carry any material and wb doesn't need any material(can go to 1,2,3)
     # if robot doesn't carry any material and wb product(can buy 1-7)
     # here is not consider that whether robot need to destroy material
-    return False if ((needed & (1 << carry_type)) > 0 and (have & (1 << carry_type)) == 0) or \
-                    (carry_type == 0 and (product == 1 or needed == 0)) or \
-                    (not (robot.last_interaction == robot.destination).all) else True
+    can_choose = True if count >= 1 else False
+    can_sell = True if (needed & (1 << carry_type)) > 0 and (have & (1 << carry_type)) == 0 else False
+    can_buy_go = True if carry_type == 0 and (product == 1 or needed == 0) else False
+    not_last_interaction = True if not (robot.last_interaction == robot.destination).all else False
+    return False if can_choose and (can_sell or can_buy_go or not_last_interaction) else True
 
 
-def find_best_workbench(robots: [], waiting_benches: []):
+def find_best_workbench(robots: [], workbenches: [], waiting_benches: [], remain_count: {}):
     """
     Dealing with Two-dimensional Nearest Point Pair Problems by Divide and Conquer Method. O(nlogn)
     choose the best workbench for robot to interaction
@@ -89,65 +107,35 @@ def find_best_workbench(robots: [], waiting_benches: []):
 
     we use kd-tree/ball-tree to solve the nearest node finding process
     """
-    update_future_value(waiting_benches)
+    update_future_value(workbenches, waiting_benches)
 
-    k_nearest_dict = {}
+    k_nearest_list = []
     selected_w = set()
     selected_r = set()
     selected = {}
-    lock = []
 
-    max_k = -1
+    robot_carry_type = [robot.carry_type for robot in robots]
 
     for robot in robots:
-        k_nearest = space_search(waiting_benches, robot, k=const.ROBOT_NUM, filter_func=filter_func)
-        k_nearest_dict[robot] = k_nearest
-        max_k = len(k_nearest) if len(k_nearest) > max_k else max_k
+        k_nearest = space_search(waiting_benches, remain_count, robot_carry_type, robot,
+                                 k=2 * const.ROBOT_NUM, filter_func=filter_func)
+        k_nearest_list.append(k_nearest)
+    sorted_indexes = [i for i, _ in sorted(enumerate(k_nearest_list), key=lambda k_nearest: len(k_nearest))]
 
-    choose_num = const.ROBOT_NUM if len(waiting_benches) > const.ROBOT_NUM else len(waiting_benches)
-
-    # if all robot has chosen the wb(it just means the number of wb was enough), the loop will break
-    while len(selected_r) != max_k:
-        for robot in robots:
-            no_choose = True
-            # if robot has select a wb, or current robot has not grabbed by other robot
-            if robot in selected_r:
-                continue
-            k_nearest = k_nearest_dict[robot]
-            # choosing the best wb
-            for k in k_nearest:
-                distance, wb = k[0], k[1]
-                # if this wb has not grabbed by other robot, choose it
-                if wb not in selected_w:
-                    selected[wb] = [robot, distance]
-                    selected_w.add(wb)
-                    selected_r.add(robot)
-                    no_choose = False
-                    break
-                # if this wb has grabbed by other robot, judge whether this robot distance less than pre-choose distance
-                # if more than it, continue to choose the next wb
-                # if less than, grab it, the pre-choose one will be removed from the selected_r
-                # after that, begin to the next robot
-                else:
-                    old_robot = selected[wb][0]
-                    if old_robot not in lock:
-                        if distance >= selected[wb][1]:
-                            continue
-                        else:
-                            selected[wb] = [robot, distance]
-                            selected_r.remove(old_robot)
-                            selected_r.add(robot)
-                            no_choose = False
-                            break
-            # force to choose the first one, and lock it
-            if no_choose:
-                k = k_nearest[0]
-                distance, wb = k[0], k[1]
-                old_robot = selected[wb][0]
+    for index in sorted_indexes:
+        robot = robots[index]
+        k_nearest = k_nearest_list[index]
+        # choosing the wb
+        for k in k_nearest:
+            distance, wb = k[0], k[1]
+            # if this wb has not grabbed by other robot, choose it
+            if wb not in selected_w:
                 selected[wb] = [robot, distance]
-                selected_r.remove(old_robot)
+                selected_w.add(wb)
                 selected_r.add(robot)
-                lock.append(robot)
+                break
+            else:
+                continue
 
     for key, value in selected.items():
         robot = value[0]
@@ -163,24 +151,50 @@ def post_operator(robots: []) -> []:
     res = []
     for robot in robots:
         opt_dict = {}
-        l_speed = math.sqrt(robot.line_speed_x ** 2 + robot.line_speed_y ** 2)
-        a_speed = robot.angle_speed
-        target_direction = cal_angle(robot)
-        target_distance = robot.task_distance
+        opt_dict_ = {'forward': 6, 'rotate': 1.5, 'buy': -1, 'sell': -1}
+        if robot.dest_wb:
+            coord_r = robot.coordinate
+            coord_d = robot.destination
+            target_angle = math.atan2(coord_d[1] - coord_r[1], coord_d[0] - coord_r[0])
+            heading_error = 0
+            if target_angle >= robot.aspect or target_angle <= robot.aspect - math.pi:
+                heading_error = (target_angle - robot.aspect + 2 * math.pi) % math.pi
+            else:
+                heading_error = -((target_angle - robot.aspect + 2 * math.pi) % math.pi)
 
-        line_speed, angle_speed = calculate_next_velocity(l_speed, a_speed, target_direction, target_distance)
+            buy = cal_buy(robot)
+            sell = cal_sell(robot)
+            angle = rotate_angle(robot)
+            line_speed, angle_speed = 6, 1.5
 
-        heading_error = target_direction - robot.aspect
-        if heading_error > math.pi:
-            heading_error -= 2 * math.pi
-        elif heading_error < -math.pi:
-            heading_error += 2 * math.pi
+            if robot.carry_type == 0:
+                if buy != -1:
+                    line_speed, angle_speed = 0, 0
+                else:
+                    if angle <= 0.1:
+                        angle_speed = 0
+                        if robot.task_distance < 1:
+                            line_speed = 1
+                    else:
+                        line_speed = 1
+            else:
+                if sell != -1:
+                    line_speed, angle_speed, = 0, 0
+                else:
+                    if angle <= 0.1:
+                        angle_speed = 0
+                        if robot.task_distance < 1:
+                            line_speed = 1
+                    else:
+                        line_speed = 1
 
-        opt_dict['forward'] = cal_robots_forward(robot)
-        opt_dict['rotate'] = min((heading_error * 50), math.pi) if heading_error != 0 else 0
-        opt_dict['buy'] = cal_buy(robot)
-        opt_dict['sell'] = cal_sell(robot)
-        res.append(opt_dict)
+            opt_dict['forward'] = line_speed
+            opt_dict['rotate'] = angle_speed if heading_error >= 0 else -angle_speed
+            opt_dict['buy'] = buy
+            opt_dict['sell'] = sell
+            res.append(opt_dict)
+        else:
+            res.append(opt_dict_)
     return res
 
 
@@ -206,7 +220,7 @@ def judge_collide(robots: []) -> bool:
     """
 
 
-def cal_robots_forward(robot: Robot) -> int:
+def cal_forward(robot: Robot, angle: float) -> float:
     # sorted_indexes = [i for i, _ in sorted(enumerate(robots), key=lambda i_r: i_r[1].urgency, reverse=True)]
     # max_index = sorted_indexes[0]
     # arr = array.array('f', const.INIT_SPEED)
@@ -218,14 +232,14 @@ def cal_robots_forward(robot: Robot) -> int:
     #     return 6
     # else:
     #     return 0
-    return 6
-
-
-def cal_angle(robot: Robot) -> float:
-    coord_r = robot.coordinate
-    coord_d = robot.destination
-    angle = math.atan2(coord_d[1] - coord_r[1], coord_d[0] - coord_r[0])
-    return angle
+    if robot.task_distance < 1.5:
+        # l_speed = math.sqrt(robot.line_speed_x ** 2 + robot.line_speed_y ** 2)
+        return 1
+    else:
+        if angle >= 0.1:
+            return 2
+        else:
+            return 6  # (-24 / math.pi) * heading_error + 6
 
 
 def cal_buy(robot: Robot) -> int:
@@ -264,32 +278,19 @@ def cal_sell(robot: Robot) -> int:
     return -1
 
 
-def calculate_next_velocity(current_speed, current_heading, target_direction, target_distance):
-    # 计算角速度
-    heading_error = target_direction - current_heading
-    if heading_error > math.pi:
-        heading_error -= 2 * math.pi
-    elif heading_error < -math.pi:
-        heading_error += 2 * math.pi
-    max_torque = 50
-    angular_acceleration = heading_error * max_torque / 20  # 角加速度 = 角误差 * 最大力矩 / (密度 * 半径^2)
-    max_angular_speed = math.pi
-    if angular_acceleration > 0:
-        max_angular_speed = min(max_angular_speed, math.sqrt(2 * angular_acceleration * math.pi / 50))
-    else:
-        max_angular_speed = max(-max_angular_speed, -math.sqrt(2 * abs(angular_acceleration) * math.pi / 50))
-    angular_speed = max(min(max_angular_speed, math.pi), -math.pi)
+def rotate_angle(robot: Robot):
+    alfa = robot.aspect
+    distance = robot.task_distance
+    coord_w = robot.dest_wb.coordinate
+    coord_r = robot.coordinate
+    dx = coord_w[0] - coord_r[0]
+    dy = coord_w[1] - coord_r[1]
 
-    # 计算线速度
-    max_force = 250
-    max_speed_forward = 6.0
-    max_speed_backward = -2.0
-    speed_error = min(max_speed_forward, max_speed_backward, target_distance) - current_speed
-    linear_acceleration = speed_error * max_force / 20  # 线加速度 = 速度误差 * 最大牵引力 / 密度
-    if linear_acceleration > 0:
-        max_linear_speed = min(max_speed_forward, math.sqrt(2 * linear_acceleration * 6))
-    else:
-        max_linear_speed = max(max_speed_backward, -math.sqrt(2 * abs(linear_acceleration) * 2))
-    linear_speed = max(min(max_linear_speed, 6), -2)
-
-    return angular_speed, linear_speed
+    beta = 0
+    if distance > 0:
+        beta = np.arccos(dx / distance)
+    if dy < 0:
+        beta = 2 * math.pi - beta
+    if robot.aspect < 0:
+        alfa = 2 * math.pi + robot.aspect
+    return 0 if math.fabs(beta - alfa) < 0.01 else math.fabs(beta - alfa)

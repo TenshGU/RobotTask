@@ -1,3 +1,5 @@
+import array
+import math
 import sys
 from Object import *
 import numpy as np
@@ -33,14 +35,16 @@ def initialization(robots: [], workbenches: [], type_wbs: {}, have_type: []):
                 r_nums += 1
             elif '1' <= ch <= '9':
                 type_ = int(ch)
-                workbench = Workbench(w_nums, type_, const.NEEDED_BIN[type_-1], const.WORK_CYCLE[type_-1],
+                angle = math.atan(Y / X)
+                profit = const.PRICE[type_-1][1] - const.PRICE[type_-1][0] if type_ <= 7 else 0
+                workbench = Workbench(w_nums, type_, angle, profit, const.NEEDED_BIN[type_-1], const.WORK_CYCLE[type_-1],
                                       np.array([X, Y]), const.DIRECT_NEXT[type_-1])
                 workbenches.append(workbench)
                 w_nums += 1
 
                 wbs = type_wbs.get(type_) if type_wbs.__contains__(type_) else []
                 wbs.append(workbench)
-                type_wbs.setdefault(type_, wbs)
+                type_wbs[type_] = wbs
 
                 if type_ not in have_type:
                     have_type.append(type_)
@@ -66,7 +70,7 @@ def initialization(robots: [], workbenches: [], type_wbs: {}, have_type: []):
 
 
 # the main work is to flush the status of wb and robot
-def read_frame(robots: [], workbenches: [], waiting_benches: [], type_wbs: {}, have_type: []):
+def read_frame(robots: [], workbenches: [], waiting_benches: [], type_wbs: {}, have_type: []) -> {}:
     waiting_benches.clear()
     w_nums = int(input())
     index = 0
@@ -104,6 +108,15 @@ def read_frame(robots: [], workbenches: [], waiting_benches: [], type_wbs: {}, h
                     if wb not in waiting_benches:
                         waiting_benches.append(wb)
 
+    remain_count = {}
+    for wb in workbenches:
+        type_ = wb.type_
+        for have_type_ in have_type:
+            if type_ in const.DIRECT_NEXT[have_type_-1]:
+                count = remain_count.get(type_) if remain_count.__contains__(type_) else 0
+                count += 1
+                remain_count[type_] = count
+    return remain_count
 
 def finish():
     sys.stdout.write('OK\n')

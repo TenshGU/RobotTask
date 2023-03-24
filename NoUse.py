@@ -58,3 +58,70 @@
 #         pointset = np.vstack([pointset, point])
 #     tree = KDTree(pointset, workbenches_np)
 #     kd_tree.append(tree)
+
+
+# for index in sorted_indexes:
+#     no_choose = True
+#     # if robot has select a wb, or current robot has not grabbed by other robot
+#     if robot in selected_r:
+#         continue
+#     k_nearest = k_nearest_dict[robot]
+#     # choosing the best wb
+#     for k in k_nearest:
+#         distance, wb = k[0], k[1]
+#         # if this wb has not grabbed by other robot, choose it
+#         if wb not in selected_w:
+#             selected[wb] = [robot, distance]
+#             selected_w.add(wb)
+#             selected_r.add(robot)
+#             no_choose = False
+#             break
+#         # if this wb has grabbed by other robot, judge whether this robot distance less than pre-choose
+#         # distance if more than it, continue to choose the next wb if less than, grab it, the pre-choose
+#         # one will be removed from the selected_r after that, begin to the next robot
+#         else:
+#             old_robot = selected[wb][0]
+#             if old_robot not in lock:
+#                 if distance >= selected[wb][1]:
+#                     continue
+#                 else:
+#                     selected[wb] = [robot, distance]
+#                     selected_r.remove(old_robot)
+#                     selected_r.add(robot)
+#                     no_choose = False
+#                     break
+#
+#     # force to choose one, and lock it
+#     if no_choose:
+#         distance, wb = k_nearest[0], k_nearest[1]
+#         old_robot = selected[wb][0]
+#         selected[wb] = [robot, distance]
+#         selected_r.remove(old_robot)
+#         selected_r.add(robot)
+#         lock.append(robot)
+
+# opt_dict = {}
+#         # target_angle = robot.dest_wb.angle
+#         # l_speed = math.sqrt(robot.line_speed_x ** 2 + robot.line_speed_y ** 2)
+#         # a_speed = robot.angle_speed
+#         # target_distance = robot.task_distance
+#         #
+#         coord_r = robot.coordinate
+#         coord_d = robot.destination
+#         target_angle = math.atan2(coord_d[1] - coord_r[1], coord_d[0] - coord_r[0])
+#         heading_error = 0
+#         if target_angle >= robot.aspect or target_angle <= robot.aspect - math.pi:
+#             heading_error = (target_angle - robot.aspect + 2 * math.pi) % math.pi
+#         else:
+#             heading_error = -((target_angle - robot.aspect + 2 * math.pi) % math.pi)
+#
+#         # coord_w = robot.dest_wb.coordinate
+#         # coord_r = robot.coordinate
+#         # aspect = robot.aspect if robot.aspect >= 0 else math.pi - robot.aspect
+#         # a = np.array([coord_w[0] - coord_r[0], coord_w[1] - coord_r[1]])
+#         # b = np.array([1, 0])
+#         # angle = np.arccos(np.vdot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b)))
+#         # big_than_pi = a[0] * b[1] - a[1] * b[0]
+#         # angle = 2 * math.pi - angle if big_than_pi > 0 else angle
+#
+#         # heading_error = math.fabs(angle - aspect) if angle > aspect else -math.fabs(angle - aspect)

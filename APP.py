@@ -1,3 +1,4 @@
+import math
 import time
 
 import numpy as np
@@ -307,7 +308,13 @@ for i in range(10):
 # tree = KDTree(point, np.array(te))
 # print(tree.query(test(np.array([1, 2])), 8, fil))
 
-k = [1, 2, 3]
-for i in k:
-    print(i)
-print(k[0])
+coord_r = np.array([44.38, 2.53])
+coord_d = np.array([8.75, 19.75])
+target_angle = math.atan2(coord_d[1] - coord_r[1], coord_d[0] - coord_r[0])
+heading_error = 0
+if target_angle >= -0.49511 or target_angle <= -0.49511 - math.pi:
+    heading_error = (target_angle + 0.49511 + 2 * math.pi) % math.pi
+else:
+    heading_error = -((target_angle + 0.49511 + 2 * math.pi) % math.pi)
+
+print(heading_error)

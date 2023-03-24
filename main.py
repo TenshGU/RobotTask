@@ -21,13 +21,13 @@ if __name__ == '__main__':
         parts = line.split(' ')
         frame_id = int(parts[0])
         score = int(parts[1])
-        read_frame(robots, workbenches, waiting_benches, type_wbs, have_type)
+        remain_count = read_frame(robots, workbenches, waiting_benches, type_wbs, have_type)
 
         # wb have not any product can be taken away, choose the wb which has less remain
         if not waiting_benches:
             waiting_benches = pre_operator(workbenches)
         # main algorithm
-        find_best_workbench(robots, waiting_benches)
+        find_best_workbench(robots, workbenches, waiting_benches, remain_count)
         operation = post_operator(robots)
 
         # No.frame_id's control
