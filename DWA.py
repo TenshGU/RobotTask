@@ -22,8 +22,8 @@ class Info:
         self.obstacles = obstacles  # other robots coordinate
 
         self.dt = 1 * 3  # 单位为20ms(1帧)，每次的运动轨迹是 20*3 ms时长的
-        self.v_reso = (8.0 / 3) / 50  # 速度分辨率:每次的步长(这里的步长为16)
-        self.w_reso = (2 * pi / 3) / 50  # 角速度分辨率:每次的步长(这里的步长为16)
+        self.v_reso = (8.0 / 3) / 50  # 速度分辨率:每次的步长(这里的步长为3)
+        self.w_reso = (2 * pi / 3) / 50  # 角速度分辨率:每次的步长(这里的步长为3)
         self.predict_time = 50 * 3  # 预测 (50*3)/3 个 20*3ms [相当于 50个3帧 = 3S]内的 取对应步长的速度 形成的 运动轨迹
         self.goal_factor = 1.0
         self.vel_factor = 1.0
