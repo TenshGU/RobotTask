@@ -1,4 +1,3 @@
-import array
 import math
 import sys
 from Object import *

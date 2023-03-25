@@ -72,6 +72,9 @@ class Robot:
         self.aspect = 0.0
         self.coordinate = coordinate
 
+        self.pre_angle_speed = 0
+        self.pre_line_speed_x = 0
+        self.pre_line_speed_y = 0
         self.expect_type = 0
         self.destination = np.array([-2, -2])
         self.task_distance = 0
@@ -86,6 +89,9 @@ class Robot:
         self.carry_type = carry_type
         self.time_coefficient = time_coefficient
         self.collide_coefficient = collide_coefficient
+        self.pre_angle_speed = self.angle_speed
+        self.pre_line_speed_x = self.pre_line_speed_x
+        self.pre_line_speed_y = self.pre_line_speed_y
         self.angle_speed = angle_speed
         self.line_speed_x = line_speed_x
         self.line_speed_y = line_speed_y
@@ -93,7 +99,9 @@ class Robot:
         self.coordinate = coordinate
         if carry_type != 0:
             self.product_value = floor(const.PRICE[carry_type-1][1] * time_coefficient * collide_coefficient)
+            self.radius = const.ROBOT_RADIUS_PRODUCT
         else:
+            self.radius = const.ROBOT_RADIUS
             # reset the attribute not belong to the system given
             self.destination = np.array([-1, -1])
             self.task_distance = 0
