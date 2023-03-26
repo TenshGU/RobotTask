@@ -721,8 +721,10 @@ def maybe_collide(r1, r2) -> bool:
         if x0 > 0 and y0 > 0:
             angle1 = math.atan2(y0 - r1.coordinate[1], x0 - r1.coordinate[0])
             angle2 = math.atan2(y0 - r2.coordinate[1], x0 - r2.coordinate[0])
-            point_side1 = True if angle1 == r1.aspect else False
-            point_side2 = True if angle2 == r2.aspect else False
+            point_side1 = True if math.fabs(angle1 - r1.aspect) <= 0.01 else False
+            point_side2 = True if math.fabs(angle2 - r2.aspect) <= 0.01 else False
+            print(point_side2)
+            print(point_side1)
             return point_side1 and point_side2
         else:
             return False
@@ -734,8 +736,8 @@ class test:
         self.aspect = aspect
 
 
-r1 = test(np.array([13.70, 14.29]), 0.713296)
-r2 = test(np.array([15.15, 14.45]), 1.617699)
+r1 = test(np.array([35.12, 23.50]), -0.561859)
+r2 = test(np.array([39.69, 21.29]), 2.857597)
 print(maybe_collide(r1, r2))
 
 # if math.fabs(r1.aspect - r2.aspect) == math.pi or r1.aspect == r2.aspect:

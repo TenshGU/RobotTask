@@ -4,23 +4,6 @@ from Object import *
 import numpy as np
 import Constant as const
 
-import logging
-logger = logging.getLogger("simple_example")
-logger.setLevel(logging.DEBUG)
-# 建立一个filehandler来把日志记录在文件里，级别为debug以上
-fh = logging.FileHandler("spam.log")
-fh.setLevel(logging.DEBUG)
-# 建立一个streamhandler来把日志打在CMD窗口上，级别为error以上
-ch = logging.StreamHandler()
-ch.setLevel(logging.ERROR)
-# 设置日志格式
-formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-ch.setFormatter(formatter)
-fh.setFormatter(formatter)
-#将相应的handler添加在logger对象中
-logger.addHandler(ch)
-logger.addHandler(fh)
-
 
 def initialization(robots: [], workbenches: [], type_wbs: {}, have_type: []):
     w_nums, r_nums = 0, 0
@@ -116,6 +99,7 @@ def read_frame(robots: [], workbenches: [], waiting_benches: [], type_wbs: {}, h
                 count += 1
                 remain_count[type_] = count
     return remain_count
+
 
 def finish():
     sys.stdout.write('OK\n')

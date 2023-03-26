@@ -39,6 +39,7 @@ class Workbench:
         # should be updated, when robot find the best wb
         self.future_value = float('inf')  # the best future value
         self.future_next = None
+        self.lock = False
 
     def flush_status(self, remain: int, materials: int, product: int):
         self.remain = remain
