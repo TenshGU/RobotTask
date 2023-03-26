@@ -145,21 +145,64 @@ def find_best_workbench(robots: [], workbenches: [], waiting_benches: [], remain
         robot.dest_wb = key
 
 
-def post_operator(robots: []) -> []:
+def post_operator(robots: [], f: int) -> []:
     """the operator for the machine should do to move itself(i.e. rotate)"""
     res = []
     for robot in robots:
         opt_dict = {}
-        opt_dict_ = {'forward': 6, 'rotate': 1.5, 'buy': -1, 'sell': -1}
+        opt_dict_ = {'forward': 0, 'rotate': 0, 'buy': -1, 'sell': -1}
         if robot.dest_wb:
-            obstacles_list = [rot.coordinate for rot in robots if rot != robot]
-            obstacles = np.array(obstacles_list)
-            info = Info(robot, obstacles)
-            u = DWA_Core(info)
-            opt_dict['forward'] = u[0] * 50
-            opt_dict['rotate'] = u[1] * 50
-            opt_dict['buy'] = cal_buy(robot)
-            opt_dict['sell'] = cal_sell(robot)
+            buy = cal_buy(robot)
+            sell = cal_sell(robot)
+
+            line_speed, angle_speed = 0, 0
+            if maybe_collide(robot, robots):
+                obstacles_list = [rot.coordinate for rot in robots if rot != robot]
+                obstacles = np.array(obstacles_list)
+                info = Info(robot, obstacles)
+                u = DWA_Core(info)
+                line_speed = u[0] * 50
+                angle_speed = u[1] * 50
+                logger.info(robot.ID)
+                logger.info(u)
+            else:
+                coord_r = robot.coordinate
+                coord_d = robot.destination
+                target_angle = math.atan2(coord_d[1] - coord_r[1], coord_d[0] - coord_r[0])
+                heading_error = 0
+                if target_angle >= robot.aspect or target_angle <= robot.aspect - math.pi:
+                    heading_error = (target_angle - robot.aspect + 2 * math.pi) % math.pi
+                else:
+                    heading_error = -((target_angle - robot.aspect + 2 * math.pi) % math.pi)
+
+                angle = math.fabs(heading_error)
+                line_speed, angle_speed = 6, 1.5
+
+                if robot.carry_type == 0:
+                    if buy != -1:
+                        line_speed, angle_speed = 0, 0
+                    else:
+                        if angle <= 0.1:
+                            angle_speed = 0
+                            if robot.task_distance < 1.5:
+                                line_speed = 1
+                        else:
+                            line_speed = 1
+                else:
+                    if sell != -1:
+                        line_speed, angle_speed, = 0, 0
+                    else:
+                        if angle <= 0.1:
+                            angle_speed = 0
+                            if robot.task_distance < 1.5:
+                                line_speed = 1
+                        else:
+                            line_speed = 1
+                angle_speed = angle_speed if heading_error >= 0 else -angle_speed
+            opt_dict['forward'] = line_speed
+            opt_dict['rotate'] = angle_speed
+            opt_dict['buy'] = buy
+            opt_dict['sell'] = sell
             res.append(opt_dict)
         else:
             res.append(opt_dict_)
@@ -280,43 +323,48 @@ def rotate_angle(robot: Robot):
     return 0 if math.fabs(beta - alfa) < 0.01 else math.fabs(beta - alfa)
 
 
-def maybe_collide(r1: Robot, r2: Robot) -> bool:
-    x0, y0 = -1, -1
-    if r1.aspect == math.pi / 2 and r2.aspect != math.pi / 2:
-        x0 = r1.coordinate[0]
-        point2 = r2.coordinate
-        asp2 = r2.aspect if r2.aspect >= 0 else math.pi + r2.aspect
-        k2 = math.tan(asp2)
-        b2 = point2[1] - k2 * point2[0]
-        y0 = k2 * x0 + b2
-    elif r2.aspect == math.pi / 2 and r1.aspect != math.pi / 2:
-        x0 = r2.coordinate[0]
-        point1 = r1.coordinate
-        asp1 = r1.aspect if r1.aspect >= 0 else math.pi + r1.aspect
-        k1 = math.tan(asp1)
-        b1 = point1[1] - k1 * point1[0]
-        y0 = k1 * x0 + b1
-    elif r1.aspect == math.pi /2 and r2.aspect == math.pi:
-        return False
-    else:
-        asp1 = r1.aspect if r1.aspect >= 0 else math.pi + r1.aspect
-        asp2 = r2.aspect if r2.aspect >= 0 else math.pi + r2.aspect
-        k1 = math.tan(asp1)
-        k2 = math.tan(asp2)
-        point1 = r1.coordinate
-        point2 = r2.coordinate
-        b1 = point1[1] - k1 * point1[0]
-        b2 = point2[1] - k2 * point2[0]
+def maybe_collide(r1: Robot, robots: []) -> bool:
+    for r2 in robots:
+        if r2 == r1:
+            continue
+        if np.linalg.norm(r1.coordinate - r2.coordinate) >= r1.radius + r2.radius:
+            continue
+        if math.fabs(math.fabs(r1.aspect - r2.aspect) - math.pi) <= 0.01 or math.fabs(r1.aspect - r2.aspect) <= 0.01:
+            return True
+        else:
+            x0, y0 = -1, -1
+            if math.fabs(r1.aspect - (math.pi / 2)) <= 0.01 and math.fabs(r2.aspect - (math.pi / 2)) >= 0.01:
+                x0 = r1.coordinate[0]
+                point2 = r2.coordinate
+                asp2 = r2.aspect if r2.aspect >= 0 else math.pi + r2.aspect
+                k2 = math.tan(asp2)
+                b2 = point2[1] - k2 * point2[0]
+                y0 = k2 * x0 + b2
+            elif math.fabs(r2.aspect - (math.pi / 2)) <= 0.01 and math.fabs(r1.aspect - (math.pi / 2)) >= 0.01:
+                x0 = r2.coordinate[0]
+                point1 = r1.coordinate
+                asp1 = r1.aspect if r1.aspect >= 0 else math.pi + r1.aspect
+                k1 = math.tan(asp1)
+                b1 = point1[1] - k1 * point1[0]
+                y0 = k1 * x0 + b1
+            else:
+                asp1 = r1.aspect if r1.aspect >= 0 else math.pi + r1.aspect
+                asp2 = r2.aspect if r2.aspect >= 0 else math.pi + r2.aspect
+                k1 = math.tan(asp1)
+                k2 = math.tan(asp2)
+                point1 = r1.coordinate
+                point2 = r2.coordinate
+                b1 = point1[1] - k1 * point1[0]
+                b2 = point2[1] - k2 * point2[0]
 
-        x0 = (b2 - b1) / (k1 - k2)
-        y0 = k1 * x0 + b1
+                x0 = (b2 - b1) / (k1 - k2)
+                y0 = k1 * x0 + b1
 
-    if x0 > 0 and y0 > 0:
-        angle1 = math.atan2(y0 - r1.coordinate[1], x0 - r1.coordinate[0])
-        angle2 = math.atan2(y0 - r2.coordinate[1], x0 - r2.coordinate[0])
-        point_side1 = True if angle1 == r1.aspect else False
-        point_side2 = True if angle2 == r2.aspect else False
-        return point_side1 and point_side2
-    else:
-        return False
-
+            if x0 > 0 and y0 > 0:
+                angle1 = math.atan2(y0 - r1.coordinate[1], x0 - r1.coordinate[0])
+                angle2 = math.atan2(y0 - r2.coordinate[1], x0 - r2.coordinate[0])
+                point_side1 = True if math.fabs(angle1 - r1.aspect) <= 0.01 else False
+                point_side2 = True if math.fabs(angle2 - r2.aspect) <= 0.01 else False
+                if point_side1 and point_side2:
+                    return True
+    return False

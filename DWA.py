@@ -10,8 +10,8 @@ class Info:
         self.v_max = 6.0 / 50  # 最大速度
         self.w_max = pi / 50  # 最大角速度
         self.w_min = -pi / 50  # 最小角速度
-        self.vacc_max = (const.FORCE / (const.ROU * pi * (robot.radius ** 2))) / 2500
-        self.wacc_max = (const.M / (const.ROU * pi * (robot.radius ** 4))) / 2500
+        self.vacc_max = (const.FORCE / (const.ROU * pi * (robot.radius ** 2))) / 50
+        self.wacc_max = (const.M / (const.ROU * pi * (robot.radius ** 4))) / 50
         # self.vacc_max = sqrt(robot.line_speed_x ** 2 + robot.line_speed_y ** 2) - sqrt(robot.pre_line_speed_x ** 2 +
         #                                                                            robot.pre_line_speed_y ** 2)  # 加速度
         # self.wacc_max = robot.angle_speed - robot.pre_angle_speed  # 角加速度
@@ -21,10 +21,10 @@ class Info:
         self.goal = robot.destination
         self.obstacles = obstacles  # other robots coordinate
 
-        self.dt = 1 * 3  # 单位为20ms(1帧)，每次的运动轨迹是 20*3 ms时长的
+        self.dt = 1 * 15  # 单位为20ms(20 * 1帧)，每次的运动轨迹是 20*20 ms时长的
         self.v_reso = (8.0 / 3) / 50  # 速度分辨率:每次的步长(这里的步长为3)
         self.w_reso = (2 * pi / 3) / 50  # 角速度分辨率:每次的步长(这里的步长为3)
-        self.predict_time = 50 * 3  # 预测 (50*3)/3 个 20*3ms [相当于 50个3帧 = 3S]内的 取对应步长的速度 形成的 运动轨迹
+        self.predict_time = 20 * 10  # 预测 (20*10)/20 个 20*20ms [相当于 10个20帧 = 4S]内的 取对应步长的速度 形成的 运动轨迹
         self.goal_factor = 1.0
         self.vel_factor = 1.0
         self.traj_factor = 1.0
