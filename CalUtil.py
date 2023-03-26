@@ -145,7 +145,7 @@ def find_best_workbench(robots: [], workbenches: [], waiting_benches: [], remain
         robot.dest_wb = key
 
 
-def post_operator(robots: [], f: int) -> []:
+def post_operator(robots: []) -> []:
     """the operator for the machine should do to move itself(i.e. rotate)"""
     res = []
     for robot in robots:
@@ -163,8 +163,6 @@ def post_operator(robots: [], f: int) -> []:
                 u = DWA_Core(info)
                 line_speed = u[0] * 50
                 angle_speed = u[1] * 50
-                logger.info(robot.ID)
-                logger.info(u)
             else:
                 coord_r = robot.coordinate
                 coord_d = robot.destination
